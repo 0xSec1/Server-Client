@@ -16,7 +16,7 @@ int main(){
     int sock = 0;
     struct sockaddr_in serverAddress;
     char buffer[BUFFER_SIZE] = {0};
-    const char *message = "Hello From client";
+    char message[BUFFER_SIZE] = {0};    //for client outgoing
 
     //create socket file descriptor
     if((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1){
@@ -42,23 +42,42 @@ int main(){
     }
 
     printf("Connected to server %s:%d\n", SERVER_IP, PORT);
+    printf("Type 'quit' or 'exit' to end connection\n");
 
-    //send message to server
-    send(sock, message, strlen(message), 0);
-    printf("Message sent: %s\n", message);
+    //main loop
+    while(1){
+        printf("Client: ");
+        if (fgets(message, BUFFER_SIZE, stdin) == NULL) {
+            fprintf(stderr, "Error reading input.\n");
+            break;
+        }
+        message[strcspn(message, "\n")] = 0;     //remove trailing newline
 
-    //read echo from server
-    int valread = recv(sock, buffer, BUFFER_SIZE - 1, 0); //-1 for null termination and spaces
+        //check for client's exit
+        if(strcmp(message, "quit") == 0 || strcmp(message, "exit") == 0){
+            printf("Client requested to end connection. Closing connection.\n");
+            send(sock, buffer, BUFFER_SIZE, 0);     //send quit request to server
+            break;
+        }
 
-    if(valread > 0){
-        buffer[valread] = '\0'; //Null termi received data
-        printf("Received echo: %s\n", buffer);
-    }
-    else if (valread == 0) {
-        printf("Server Closed connection.\n");
-    }
-    else{
-        fprintf(stderr, "recv failed with error: %d (%s)\n", errno, strerror(errno));
+        //send message
+        if(send(sock, message, strlen(message), 0) < 0){
+            fprintf(stderr, "Send failed with error: %d (%s)\n", errno, strerror(errno));
+            break;
+        }
+
+        //Receive from server
+        int valread = recv(sock, buffer, BUFFER_SIZE - 1, 0);
+        if(valread > 0){
+            buffer[valread] = '\0'; //null terminate received data
+            printf("Server: %s\n", buffer);
+
+            //check for server exit
+            if(strcmp(buffer, "quit") == 0 || strcmp(buffer, "exit") == 0){
+                printf("Server requested to end connection. Closing connection.\n");
+                break;
+            }
+        }
     }
 
     //close socket
