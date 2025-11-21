@@ -1,4 +1,3 @@
-#include <asm-generic/socket.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,12 +70,14 @@ int main(){
         if(valread > 0){
             buffer[valread] = '\0'; //null terminate received data
             printf("Server: %s\n", buffer);
-
-            //check for server exit
-            if(strcmp(buffer, "quit") == 0 || strcmp(buffer, "exit") == 0){
-                printf("Server requested to end connection. Closing connection.\n");
-                break;
-            }
+        }
+        else if(valread == 0){
+            printf("Server Disconnected");
+            break;
+        }
+        else{
+            fprintf(stderr, "recv failed with error: %d (%s)\n", errno, strerror(errno));
+            break;
         }
     }
 
